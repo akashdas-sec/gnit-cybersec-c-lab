@@ -1,0 +1,201 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GNIT CyberSec C Lab V6</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:#0b1020;color:#eaf0ff}
+button,input,textarea,select{font:inherit}button{cursor:pointer;border:0;border-radius:8px;padding:10px 14px;background:#2563eb;color:white;font-weight:700}
+button.secondary{background:#25304a}button.danger{background:#b42318}.hidden{display:none!important}
+#auth{min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at 30% 20%,#243a79,#0b1020 55%)}
+.card{width:min(430px,92vw);background:#121a30;border:1px solid #2a3757;border-radius:16px;padding:28px;box-shadow:0 20px 70px #0008}
+.card h1{margin:0 0 6px}.muted{color:#9eabc7}.field{margin:12px 0}.field input,.field textarea,.field select{width:100%;background:#0c1326;color:white;border:1px solid #354363;border-radius:8px;padding:11px}
+.top{height:58px;background:#11182b;border-bottom:1px solid #293552;display:flex;align-items:center;justify-content:space-between;padding:0 18px}
+.layout{height:calc(100vh - 58px);display:grid;grid-template-columns:280px 1fr;min-width:900px}
+.sidebar{border-right:1px solid #293552;overflow:auto;background:#0e1527}.side-title{padding:15px;font-weight:800}.problem{padding:13px 15px;border-bottom:1px solid #202b44;cursor:pointer}.problem:hover,.problem.active{background:#172440}.badge{font-size:11px;padding:3px 7px;border-radius:20px;background:#263653;margin-left:5px}
+.main{display:grid;grid-template-rows:42% 58%;min-width:0}.statement{padding:18px;overflow:auto;border-bottom:1px solid #293552}.statement h2{margin:0 0 8px}.codearea{display:grid;grid-template-columns:55% 45%;min-height:0}.editor{min-width:0;border-right:1px solid #293552}.editorbar,.termbar{height:44px;background:#11182b;display:flex;align-items:center;gap:8px;padding:0 10px}.editorbar .spacer{flex:1}.terminal{min-width:0;display:flex;flex-direction:column;background:#050812}.terminal-body{flex:1;min-height:0}.runstate{font-size:12px;color:#8ea2c8}.termbar .spacer{flex:1}
+#term{height:100%;width:100%;padding:8px}
+.auth-actions{display:flex;gap:8px;margin-top:10px}.error{color:#ff8585;margin-top:8px;min-height:20px}
+.admin{padding:20px;overflow:auto;height:calc(100vh - 58px)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.panel{background:#11182b;border:1px solid #293552;border-radius:12px;padding:16px}.panel h3{margin-top:0}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:9px;border-bottom:1px solid #293552;font-size:13px}th{color:#aebbd5}.small{font-size:12px}.ok{color:#4ade80}.bad{color:#ff7b72}
+#modal{position:fixed;inset:0;background:#0009;display:grid;place-items:center;padding:20px}.modalbox{width:min(900px,95vw);max-height:90vh;overflow:auto;background:#11182b;border:1px solid #293552;border-radius:14px;padding:18px}
+pre.code{white-space:pre-wrap;background:#080d19;border:1px solid #293552;border-radius:8px;padding:12px;max-height:55vh;overflow:auto}
+@media(max-width:1000px){.layout{grid-template-columns:230px}.codearea{grid-template-columns:50% 50%}}
+</style>
+</head>
+<body>
+<div id="auth">
+  <div class="card">
+    <h1>🔐 GNIT CyberSec C Lab</h1>
+    <div class="muted">Student registration + VS Code style C terminal</div>
+    <div id="loginBox">
+      <div class="field"><input id="loginUser" placeholder="Username"></div>
+      <div class="field"><input id="loginPass" type="password" placeholder="Password"></div>
+      <button style="width:100%" onclick="login()">Login</button>
+      <div class="auth-actions"><button class="secondary" style="width:100%" onclick="showRegister()">Create Student Account</button></div>
+      <div class="muted small" style="margin-top:12px">Admin demo: admin / admin123</div>
+    </div>
+    <div id="regBox" class="hidden">
+      <div class="field"><input id="regName" placeholder="Full name"></div>
+      <div class="field"><input id="regUser" placeholder="Username"></div>
+      <div class="field"><input id="regPass" type="password" placeholder="Password (6+ characters)"></div>
+      <div class="field"><input id="regPass2" type="password" placeholder="Confirm password"></div>
+      <button style="width:100%" onclick="register()">Create Account</button>
+      <div class="auth-actions"><button class="secondary" style="width:100%" onclick="showLogin()">← Back to Login</button></div>
+    </div>
+    <div id="authMsg" class="error"></div>
+  </div>
+</div>
+
+<div id="studentApp" class="hidden">
+  <div class="top"><b>🔐 GNIT CyberSec C Lab</b><span id="studentInfo"></span><button class="secondary" onclick="logout()">Logout</button></div>
+  <div class="layout">
+    <aside class="sidebar"><div class="side-title">Problems <span id="progress" class="badge"></span></div><div id="problemList"></div></aside>
+    <main class="main">
+      <section class="statement"><h2 id="pTitle"></h2><div id="pDifficulty" class="badge"></div><p id="pStatement"></p><h4>Input</h4><pre id="pInput"></pre><h4>Output</h4><pre id="pOutput"></pre></section>
+      <section class="codearea">
+        <div class="editor">
+          <div class="editorbar"><b>main.c</b><span class="spacer"></span><span id="compileState" class="runstate"></span><button onclick="runProgram()">▶ Run</button><button class="secondary" onclick="submitCode()">Submit</button></div>
+          <div id="editor" style="height:calc(100% - 44px)"></div>
+        </div>
+        <div class="terminal">
+          <div class="termbar"><b>Terminal</b><span class="spacer"></span><button class="secondary" onclick="stopProgram()">Stop</button><button class="secondary" onclick="clearTerminal()">Clear</button></div>
+          <div id="term" class="terminal-body"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div id="adminApp" class="hidden">
+  <div class="top"><b>🛠 GNIT CyberSec — Admin</b><span id="adminInfo"></span><button class="secondary" onclick="logout()">Logout</button></div>
+  <div class="admin">
+    <div class="grid">
+      <div class="panel"><h3>Student Progress</h3><div id="students"></div></div>
+      <div class="panel"><h3>Add Problem</h3>
+        <div class="field"><input id="aTitle" placeholder="Title"></div>
+        <div class="field"><textarea id="aStatement" rows="3" placeholder="Problem statement"></textarea></div>
+        <div class="field"><input id="aInput" placeholder="Input description"></div>
+        <div class="field"><input id="aOutput" placeholder="Output description"></div>
+        <div class="field"><select id="aDiff"><option>Easy</option><option>Medium</option><option>Hard</option></select></div>
+        <div class="field"><textarea id="aStarter" rows="6" placeholder="Starter C code"></textarea></div>
+        <div class="field"><textarea id="aTests" rows="5" placeholder='Hidden tests JSON: [["5 7","12"],["2 3","5"]]'></textarea></div>
+        <button onclick="addProblem()">Add Problem</button><span id="adminMsg" class="small"></span>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px"><h3>Recent Submissions</h3><div id="subs"></div></div>
+    <div class="panel" style="margin-top:16px"><h3>Problems</h3><div id="adminProblems"></div></div>
+  </div>
+</div>
+
+<div id="modal" class="hidden"><div class="modalbox"><div style="display:flex;justify-content:space-between"><h3 id="mTitle">Submission</h3><button class="secondary" onclick="closeModal()">Close</button></div><pre id="mCode" class="code"></pre><div class="field"><textarea id="mFeedback" rows="3" placeholder="Feedback to student"></textarea></div><button onclick="sendFeedback()">Send Feedback</button></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+<script>
+let token="", me=null, problems=[], currentProblem=null, editor=null, term=null, fit=null, ws=null, currentSubmission=null;
+
+function api(path,opts={}){opts.headers=Object.assign({"Content-Type":"application/json","Authorization":"Bearer "+token},opts.headers||{});return fetch(path,opts).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"Request failed");return d})}
+function showRegister(){loginBox.classList.add("hidden");regBox.classList.remove("hidden");authMsg.textContent=""}
+function showLogin(){regBox.classList.add("hidden");loginBox.classList.remove("hidden");authMsg.textContent=""}
+async function register(){
+  try{const name=regName.value.trim(),u=regUser.value.trim(),p=regPass.value,p2=regPass2.value;
+    if(p!==p2)throw Error("Passwords do not match");
+    await fetch("/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,username:u,password:p})}).then(async r=>{let d=await r.json();if(!r.ok)throw Error(d.error);return d});
+    authMsg.textContent="Account created. Now login."; showLogin(); loginUser.value=u;
+  }catch(e){authMsg.textContent=e.message}
+}
+async function login(){
+  try{const d=await fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:loginUser.value,password:loginPass.value})}).then(async r=>{let x=await r.json();if(!r.ok)throw Error(x.error);return x});
+    token=d.token;me=d.user;localStorage.setItem("gnitToken",token);startApp();
+  }catch(e){authMsg.textContent=e.message}
+}
+function logout(){if(ws)ws.close();localStorage.removeItem("gnitToken");location.reload()}
+async function startApp(){
+  auth.classList.add("hidden");
+  if(me.role==="admin"){adminApp.classList.remove("hidden");adminInfo.textContent=me.name;loadAdmin();}
+  else{studentApp.classList.remove("hidden");studentInfo.textContent=me.name+" (@"+me.username+")";loadStudent();}
+}
+function initMonaco(){
+  require.config({paths:{vs:"https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs"}});
+  require(["vs/editor/editor.main"],()=>{
+    editor=monaco.editor.create(document.getElementById("editor"),{value:"",language:"c",theme:"vs-dark",automaticLayout:true,fontSize:14,minimap:{enabled:false}});
+    editor.onDidChangeModelContent(()=>{});
+  });
+}
+function initTerm(){
+  term=new Terminal({convertEol:true,cursorBlink:true,fontSize:13,theme:{background:"#050812"}});
+  fit=new FitAddon.FitAddon();term.loadAddon(fit);term.open(document.getElementById("term"));fit.fit();
+  term.onData(data=>{if(ws&&ws.readyState===1)ws.send(JSON.stringify({type:"input",data}))});
+}
+async function loadStudent(){
+  if(!editor)initMonaco(); if(!term)initTerm();
+  problems=await api("/api/problems"); renderProblems();
+  const pr=await api("/api/student/progress"); progress.textContent=`${pr.solved}/${pr.total} solved`;
+  if(problems.length)selectProblem(problems[0].id);
+}
+function renderProblems(){problemList.innerHTML=problems.map(p=>`<div class="problem ${currentProblem&&currentProblem.id===p.id?'active':''}" onclick="selectProblem(${p.id})"><b>${p.id}. ${esc(p.title)}</b><span class="badge">${esc(p.difficulty)}</span></div>`).join("")}
+async function selectProblem(id){
+  currentProblem=await api("/api/problems/"+id);renderProblems();
+  pTitle.textContent=currentProblem.title;pDifficulty.textContent=currentProblem.difficulty;pStatement.textContent=currentProblem.statement;pInput.textContent=currentProblem.input||"—";pOutput.textContent=currentProblem.output||"—";
+  if(editor){editor.setValue(currentProblem.starter||"");clearMarkers()}
+  clearTerminal();compileState.textContent="";
+}
+function clearMarkers(){if(window.monaco&&editor)monaco.editor.setModelMarkers(editor.getModel(),"gcc",[])}
+function setCompileMarkers(text){
+  if(!window.monaco||!editor)return;
+  const markers=[]; const re=/:(\d+):(\d+):\s*(?:fatal\s+)?error:\s*(.*)/g; let m;
+  while((m=re.exec(text)))markers.push({startLineNumber:+m[1],startColumn:+m[2],endLineNumber:+m[1],endColumn:+m[2]+1,message:m[3],severity:monaco.MarkerSeverity.Error});
+  monaco.editor.setModelMarkers(editor.getModel(),"gcc",markers);
+}
+function clearTerminal(){if(term)term.clear()}
+function runProgram(){
+  clearMarkers(); compileState.textContent="Compiling...";
+  clearTerminal();term.writeln("\\x1b[36m$ ./main\\x1b[0m");
+  if(ws)ws.close();
+  ws=new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host+"/terminal?token="+encodeURIComponent(token));
+  ws.onopen=()=>ws.send(JSON.stringify({type:"run",code:editor.getValue()}));
+  ws.onmessage=e=>{const m=JSON.parse(e.data);
+    if(m.type==="stdout")term.write(m.data);
+    else if(m.type==="stderr")term.write("\\x1b[31m"+m.data+"\\x1b[0m");
+    else if(m.type==="compileError"){compileState.textContent="❌ Compile error";term.writeln("\\r\\n\\x1b[31m"+m.data+"\\x1b[0m");setCompileMarkers(m.data)}
+    else if(m.type==="status"){compileState.textContent="🟢 Running";term.writeln("\\r\\n\\x1b[90m"+m.data+"\\x1b[0m");}
+    else if(m.type==="exit"){compileState.textContent="";term.writeln("\\r\\n\\x1b[90m"+m.data+"\\x1b[0m");}
+    else if(m.type==="error")term.writeln("\\r\\n\\x1b[31m"+m.data+"\\x1b[0m");
+  };
+}
+function stopProgram(){if(ws&&ws.readyState===1)ws.send(JSON.stringify({type:"stop"}))}
+async function submitCode(){
+  try{compileState.textContent="Judging...";const d=await api("/api/submit",{method:"POST",body:JSON.stringify({problemId:currentProblem.id,code:editor.getValue()})});
+    term.writeln("\\r\\n"+(d.status==="Accepted"?"\\x1b[32m":"\\x1b[31m")+d.status+` — ${d.passed||0}/${d.total||0}\\x1b[0m`);
+    compileState.textContent=d.status==="Accepted"?"✅ Accepted":"❌ "+d.status;
+    if(d.error)term.writeln("\\r\\n\\x1b[31m"+d.error+"\\x1b[0m");
+    const pr=await api("/api/student/progress");progress.textContent=`${pr.solved}/${pr.total} solved`;
+  }catch(e){term.writeln("\\r\\n\\x1b[31m"+e.message+"\\x1b[0m")}
+}
+async function loadAdmin(){await refreshAdmin()}
+async function refreshAdmin(){
+  const [students,subs,ps]=await Promise.all([api("/api/admin/students"),api("/api/admin/submissions"),api("/api/problems")]);
+  studentsDiv=students.map(s=>`<tr><td>${esc(s.name)}</td><td>@${esc(s.username)}</td><td>${s.solved}/${s.total}</td><td>${s.percent}%</td><td>${s.runs}</td></tr>`).join("");
+  students.innerHTML=`<table><tr><th>Name</th><th>User</th><th>Solved</th><th>Progress</th><th>Submissions</th></tr>${studentsDiv}</table>`;
+  subsDiv=subs.map(s=>`<tr><td>${esc(s.userName)}</td><td>${esc(s.problemTitle)}</td><td class="${s.status==="Accepted"?"ok":"bad"}">${esc(s.status)}</td><td>${s.passed||0}/${s.total||0}</td><td><button class="secondary small" onclick="viewSubmission(${s.id})">View Code</button></td></tr>`).join("");
+  subs.innerHTML=`<table><tr><th>Student</th><th>Problem</th><th>Status</th><th>Tests</th><th></th></tr>${subsDiv||"<tr><td colspan=5>No submissions yet.</td></tr>"}</table>`;
+  adminProblems.innerHTML=ps.map(p=>`<div class="problem"><b>${p.id}. ${esc(p.title)}</b> <span class="badge">${esc(p.difficulty)}</span> <button class="danger small" style="float:right" onclick="deleteProblem(${p.id})">Delete</button></div>`).join("");
+}
+async function addProblem(){
+  try{const tests=JSON.parse(aTests.value);if(!Array.isArray(tests))throw Error("Tests must be JSON array");
+    await api("/api/problems",{method:"POST",body:JSON.stringify({title:aTitle.value,statement:aStatement.value,input:aInput.value,output:aOutput.value,difficulty:aDiff.value,starter:aStarter.value,tests})});
+    adminMsg.textContent=" ✓ Added";aTitle.value=aStatement.value=aInput.value=aOutput.value=aStarter.value=aTests.value="";refreshAdmin();
+  }catch(e){adminMsg.textContent=" ✗ "+e.message}
+}
+async function deleteProblem(id){if(!confirm("Delete this problem?"))return;await api("/api/problems/"+id,{method:"DELETE"});refreshAdmin()}
+async function viewSubmission(id){currentSubmission=await api("/api/admin/submissions/"+id);mTitle.textContent=`${currentSubmission.userName} — ${currentSubmission.problemTitle} — ${currentSubmission.status}`;mCode.textContent=currentSubmission.code;mFeedback.value=currentSubmission.feedback||"";modal.classList.remove("hidden")}
+function closeModal(){modal.classList.add("hidden")}
+async function sendFeedback(){await api("/api/admin/feedback/"+currentSubmission.id,{method:"POST",body:JSON.stringify({feedback:mFeedback.value})});alert("Feedback saved.");closeModal()}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+(async()=>{token=localStorage.getItem("gnitToken")||"";if(token){try{me=await api("/api/me");startApp()}catch{localStorage.removeItem("gnitToken")}}})();
+</script>
+</body>
+</html>
